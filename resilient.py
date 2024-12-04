@@ -111,7 +111,8 @@ SCANNER = re.compile("|".join(f"(?P<{t.name}>{t.value})" for t in TYPES))
 def scan(text: str) -> Iterable[Token]:
     for match in SCANNER.finditer(text):
         if match:
-            i, text = next(filter(lambda m: m[1] is not None, enumerate(match.groups())))
+            i = match.lastindex - 1
+            text = match[i + 1]
             type_ = TYPES[i]
             if type_ == TokenKind.Name and text in KEYWORDS:
                 i = KEYWORDS.index(text)
