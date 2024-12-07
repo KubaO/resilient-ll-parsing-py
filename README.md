@@ -48,10 +48,10 @@ As the code is read and written left-to-right, the parser should also recognize 
 
 Academic literature suggests another lens to use when looking at this problem: error recovery.
 Rather than just recognizing incomplete constructs, the parser can attempt to guess a minimal edit which completes the construct and gets rid of the syntax error.
-From this angle, the above example would look rather like [`fn fib_rec(f1: u32, /* ) {} */` ,]{.display} where the stuff in a comment is automatically inserted by the parser.
+From this angle, the above example would look rather like `fn fib_rec(f1: u32, /* ) {} */`, where the stuff in a comment is automatically inserted by the parser.
 
 Resilience is a more fruitful framing to use for a language server --- incomplete code is the ground truth, and only the user knows how to correctly complete it.
-An language server can only offer guesses and suggestions, and they are more precise if they employ post-parsing semantic information.
+A language server can only offer guesses and suggestions, and they are more precise if they employ post-parsing semantic information.
 
 Error recovery might work better when emitting understandable syntax errors, but, in a language server, the importance of clear error messages for _syntax_ errors is relatively lower, as highlighting such errors right in the editor synchronously with typing usually provides tighter, more useful tacit feedback.
 
@@ -71,7 +71,7 @@ Because code is written top-down and left-to-right, LL seems to have an advantag
 Moreover, there isn't really anything special you need to do to make LL parsing resilient.
 You sort of... just not crash on the first error, and everything else more or less just works.
 
-Details are fiddly though, so, in the rest of the post, we will write a complete implementation of a hand-written recursive descent + Pratt resilient parser.
+Details are fiddly though, so, in the rest of the post, we will write a complete implementation of a handwritten recursive descent + Pratt resilient parser.
 
 ## Introducing L
 
@@ -170,7 +170,7 @@ That is, for something like
 the `fn` and `f` tokens would be explicit parts of the AST, while the comment and surrounding whitespace would belong to the collection of trivia tokens hanging off the `fn` token.
 
 One complication here is that it's not always just tokens that can appear anywhere, sometimes you can have full trees like that.
-For example, comments might support markdown syntax, and you might actually want to parse that properly (e.g., to resolve links to declarations).
+For example, comments might support Markdown syntax, and you might actually want to parse that properly (e.g., to resolve links to declarations).
 Syntax errors can also span whole subtrees.
 For example, when parsing `pub(crate) nope` in Rust, it would be smart to parse `pub(crate)` as a visibility modifier, and nest it into a bigger `Error` node.
 
@@ -220,7 +220,7 @@ Attaching comments needs some heuristics --- for example, non-doc comments gener
 
 Another design choice is handling of error messages.
 One approach is to treat error messages as properties of the syntax tree itself, by either inferring them from the tree structure, or just storing them inline.
-Alternatively, errors can be considered to be a side-effect of the parsing process (that way, trees constructed manually during, eg, refactors, won't carry any error messages, even if they are invalid).
+Alternatively, errors can be considered to be a side effect of the parsing process (that way, trees constructed manually during, eg, refactors, won't carry any error messages, even if they are invalid).
 
 Here's the full set of token and tree kinds for our language L:
 
@@ -260,7 +260,7 @@ Things to note:
 
 ## Lexer
 
-Won't be covering lexer here, let's just say we have `fn lex(text: &str) -> Vec<Token>` function. Two points worth mentioning:
+Won't be covering lexer here, let's just say we have `def lex(text: str) -> Iterable[Token>]: ...` function. Two points worth mentioning:
 
 - Lexer itself should be resilient, but that's easy --- produce an `Error` token for anything which isn't a valid token.
 - Writing lexer by hand is somewhat tedious, but is very simple relative to everything else.
@@ -475,7 +475,7 @@ def func(p: Parser):
 ```
 
 1) When parsing a function, we assert that the current token is `fn`.
-   There's some duplication with the [`if p.at(FnKeyword)` ,]{.display} check at the call-site, but this duplication actually helps readability.
+   There's some duplication with the `if p.at(FnKeyword)`, check at the call-site, but this duplication actually helps readability.
 
 2) Again, we surround the body of the function with `open`/`close` pair.
 
@@ -661,7 +661,7 @@ In the catch-all arm, we take care to consume the token, to make sure that the s
 
 Next expression to handle would be `ExprCall`.
 This requires some preparation.
-Consider this example: [`f(1)(2)` .]{.display}
+Consider this example: `f(1)(2)`.
 
 We want the following parenthesis structure here:
 
@@ -782,7 +782,7 @@ Now only binary expressions are left.
 We will use a Pratt parser for those.
 This is genuinely tricky code, so I have a dedicated article explaining how it all works:
 
-[[_Simple but Powerful Pratt Parsing_](https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html) .]{.display}
+[_Simple but Powerful Pratt Parsing_](https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html).
 
 Here, I'll just dump a pageful of code without much explanation:
 
@@ -905,7 +905,7 @@ If something goes wrong inside a loop, our choices are:
 - skip a token, and continue with the next iteration of the current loop,
 - break out of the inner loop, and let the outer loop handle recovery.
 
-The top-most loop must use the "skip a token" solution, because it needs to consume all of the input tokens.
+The top-most loop must use the "skip a token" solution, because it needs to consume all the input tokens.
 
 ## Improving Resilience
 
@@ -1209,7 +1209,7 @@ Summarizing:
 
 - Resilient parsing means recovering as much syntactic structure from erroneous code as possible.
 
-- Resilient parsing is important for IDEs and language servers, who's job mostly ends when the code does not have errors any more.
+- Resilient parsing is important for IDEs and language servers, who's job mostly ends when the code does not have errors anymore.
 
 - Resilient parsing is related, but distinct from error recovery and repair.
   Rather than guessing what the user meant to write, the parser tries to make sense of what is actually written.
