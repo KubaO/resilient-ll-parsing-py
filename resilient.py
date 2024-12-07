@@ -15,6 +15,10 @@ def panic(msg: str):
     os.abort()
 
 
+def kw(name: str) -> str:
+    return f"{name}(?![_a-zA-Z0-9])"
+
+
 class TokenKind(Enum):
     # Token types recognized by the regexp-based scanner
     Arrow = '->'
@@ -31,18 +35,17 @@ class TokenKind(Enum):
     Star = r'\*'
     Slash = '/'
     Int = '[0-9]+'
+
+    FnKeyword = kw('fn')
+    LetKeyword = kw('let')
+    ReturnKeyword = kw('return')
+    TrueKeyword = kw('true')
+    FalseKeyword = kw('false')
+
     Name = '[_a-zA-Z0-9]+'
-
-    # Keyword tokens that Name gets specialized to
-    FnKeyword = 'fn',
-    LetKeyword = 'let',
-    ReturnKeyword = 'return',
-    TrueKeyword = 'true',
-    FalseKeyword = 'false',
-
-    # Special tokens
-    Eof = ['$']
-    ErrorToken = ['ERROR']
+    Ws = r'[ \\n\\t\\h\\v\\r]+'
+    Error = '.'
+    Eof = '$'
 
 
 class TreeKind(Enum):
@@ -82,8 +85,8 @@ class Tree(NamedTuple):
         buf += f"{indent}{self.kind.name}\n"
         for child in self.children:
             match child:
-                case Token(_, text):
-                    buf += f"{indent}  '{text}'\n"
+                case Token(kind, text):
+                    buf += f"{indent}  {kind.name} '{text}'\n"
                 case Tree(_, __) as tree:
                     buf = tree.print(buf, level + 1)
 
@@ -101,26 +104,31 @@ def parse(text: str) -> Tree:
     return p.build_tree()
 
 
-KEYWORD_TYPES = tuple(t for t in TokenKind if isinstance(t.value, tuple))
-KEYWORDS = tuple(t.value[0] for t in KEYWORD_TYPES)
-
-TYPES = tuple(t for t in TokenKind if isinstance(t.value, str))
-SCANNER = re.compile("|".join(f"(?P<{t.name}>{t.value})" for t in TYPES))
+SCANNER = re.compile("|".join(f"(?P<{t.name}>{t.value})" for t in TokenKind))
+TYPES = {v: TokenKind[k] for k, v in SCANNER.groupindex.items()}
 
 
 def scan(text: str) -> Iterable[Token]:
+    error = ""
+
+    def error_token() -> Token:
+        nonlocal error
+        result, error = Token(TokenKind.Error, error), ""
+        return result
+
     for match in SCANNER.finditer(text):
-        if match:
-            i = match.lastindex - 1
-            text = match[i + 1]
-            type_ = TYPES[i]
-            if type_ == TokenKind.Name and text in KEYWORDS:
-                i = KEYWORDS.index(text)
-                yield Token(KEYWORD_TYPES[i], text)
-            else:
-                yield Token(TYPES[i], text)
-        else:
-            yield Token(TokenKind.ErrorToken, '')
+        assert match  # the scanner always matches, with a fallback of Error
+        i = match.lastindex
+        text = match[i]
+        match TYPES[i]:
+            case TokenKind.Eof | TokenKind.Ws:
+                pass  # drop whitespace and eof
+            case TokenKind.Error:
+                error += text
+            case ty:
+                if error: yield error_token()
+                yield Token(ty, text)
+    if error: yield error_token()
 
 
 def lex(text: str) -> list[Token]:
@@ -234,7 +242,7 @@ class Parser:
         if self.eat(kind):
             return
         # TODO: Error reporting.
-        print(f"expected {kind}", file=sys.stderr)
+        print(f"expected {kind.name}, got {self.nth(0).name}", file=sys.stderr)
 
 
 def file(p: Parser):
@@ -441,7 +449,7 @@ def arg(p: Parser):
 def smoke():
     text = """
     fn f() {
-      let x = 1 +
+      let x = 1 + ??
       let y = 2
     }
     """
